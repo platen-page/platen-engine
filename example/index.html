@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Platen engine demo</title>
+<style>
+  :root { color-scheme: light dark; --bg: #e9edf1; --fg: #15171a; --accent: #2a43b8; --card: #fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #15171a; --fg: #e9edf1; --accent: #8a9cff; --card: #1f2226; } }
+  body { margin: 0; font: 16px/1.5 system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 16px 0; }
+  select, button, input { font: inherit; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  img { display: block; max-width: 100%; background: var(--card); box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+  small { opacity: .7; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Platen engine demo</h1>
+  <p>Choose an image of a page. Everything runs in this tab; nothing is uploaded.
+  For PDF input, render each page to a canvas first (for example with pdf.js), as <a href="https://platen.page/scan/">platen.page</a> does.</p>
+  <div class="bar">
+    <input type="file" id="file" accept="image/*">
+    <select id="preset"></select>
+    <button id="again" disabled>New variation</button>
+    <button id="save" disabled>Save JPG</button>
+    <small id="info"></small>
+  </div>
+  <img id="out" alt="">
+</main>
+<script src="../jpeg-encoder.js"></script>
+<script src="../platen-engine.js"></script>
+<script>
+const { scan, encodeJPEG, PRESETS } = PlatenEngine;
+const $ = id => document.getElementById(id);
+for (const [key, p] of Object.entries(PRESETS)) $("preset").add(new Option(p.label, key));
+let source = null, seed = 1, url = null, bytes = null;
+
+// Draw the image onto a white A4-width canvas at the preset's resolution.
+function pageCanvas(img, dpi) {
+  const w = Math.round(8.27 * dpi), h = Math.round(w * img.naturalHeight / img.naturalWidth);
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, w, h);
+  x.imageSmoothingQuality = "high"; x.drawImage(img, 0, 0, w, h);
+  return c;
+}
+function render() {
+  if (!source) return;
+  const settings = PRESETS[$("preset").value], dpi = +settings.dpi;
+  const t0 = performance.now();
+  const out = scan(pageCanvas(source, dpi), settings, seed, dpi, seed % 3);
+  bytes = encodeJPEG(out, settings.jpeg);
+  if (url) URL.revokeObjectURL(url);
+  url = URL.createObjectURL(new Blob([bytes], { type: "image/jpeg" }));
+  $("out").src = url;
+  $("info").textContent = `${out.width} × ${out.height} px, ${Math.round(bytes.length / 1024)} KB, ${Math.round(performance.now() - t0)} ms`;
+  $("again").disabled = $("save").disabled = false;
+}
+$("file").onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const img = new Image();
+  img.onload = () => { source = img; render(); };
+  img.src = URL.createObjectURL(f);
+};
+$("preset").onchange = render;
+$("again").onclick = () => { seed = (Math.random() * 1e9) | 0; render(); };
+$("save").onclick = () => { const a = document.createElement("a"); a.href = url; a.download = "scanned.jpg"; a.click(); };
+</script>
+</body>
+</html>

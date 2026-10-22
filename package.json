@@ -1,0 +1,12 @@
+{
+  "name": "platen-engine",
+  "version": "1.0.0",
+  "description": "The scan engine behind platen.page: makes PDFs and images look scanned or photographed, entirely in the browser.",
+  "main": "platen-engine.js",
+  "files": ["platen-engine.js", "jpeg-encoder.js", "LICENSE", "README.md"],
+  "keywords": ["scan", "scanner", "pdf", "photocopy", "fax", "canvas", "image-processing"],
+  "homepage": "https://platen.page",
+  "repository": {"type": "git", "url": "https://github.com/platen-page/platen-engine.git"},
+  "license": "MIT",
+  "private": true
+}
