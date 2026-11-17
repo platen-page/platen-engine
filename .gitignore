@@ -1,0 +1,5 @@
+
+# Secrets: never commit local settings or key files
+.claude/settings.local.json
+.env
+.env.*
